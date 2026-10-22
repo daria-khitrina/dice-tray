@@ -173,6 +173,10 @@ renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
 renderer.setClearColor(0x000000,0);
 renderer.autoClear=false;
 const maxAniso=renderer.capabilities.getMaxAnisotropy();
+// Rapid window resizing can knock out the GPU context; without this the canvas
+// goes blank forever instead of recovering once the context comes back.
+canvas.addEventListener('webglcontextlost', e=>{ e.preventDefault(); }, false);
+canvas.addEventListener('webglcontextrestored', ()=>{ layout(); }, false);
 
 const scene=new THREE.Scene();
 scene.fog=new THREE.Fog(0x0d0d0e, 8, 20);
@@ -350,7 +354,14 @@ function layout(){
   R=clamp((W/2/ppu)*1.12,2.4,4.2); LIFT=0.5*R;
   scene.fog.near=dist+0.4; scene.fog.far=dist+2*R+1.6;
 }
-addEventListener('resize',layout);
+// Throttle to one layout() per animation frame: a raw per-event listener fires
+// dozens of times a second while a window is being dragged, and reallocating
+// the renderer's buffers that fast is what was knocking out the GPU context.
+let resizeRAF=null;
+addEventListener('resize',()=>{
+  if(resizeRAF) return;
+  resizeRAF=requestAnimationFrame(()=>{ resizeRAF=null; layout(); });
+});
 layout();
 
 /* ---------- Ring + rolling ---------- */
