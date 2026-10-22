@@ -5,3 +5,7 @@ A 3D dice roller for tabletop games — d4, d6, d8, d10, d12, d20, d100 — rend
 Live at [dice.dariakhitrina.com](https://dice.dariakhitrina.com).
 
 Single self-contained `index.html`, no build step.
+
+## Credits
+
+Dice rendering approach inspired by [3d-dice/dice-box-threejs](https://github.com/3d-dice/dice-box-threejs).
