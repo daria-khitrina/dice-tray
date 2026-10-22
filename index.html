@@ -1,0 +1,672 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Dice Tray</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@600&display=swap">
+<style>
+/* Layout: full-bleed 3D stage. Default: dice on a tilted ring, gear at the bottom. Edit mode: active dice in a jiggling line with remove badges, removed dice piled below, close button at the bottom. Single dark look. */
+:root{
+  --bg:#0b0b0c;
+  --bg-lift:#161617;
+  --ink:#f3f1ec;
+  --icon:#6f6d6a;
+  --icon-hi:#a3a09b;
+  --badge:#c4c2be;
+  --badge-ink:#1a1918;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{
+  margin:0;overflow:hidden;overscroll-behavior:none;
+  background-color:var(--bg);
+  background-image:radial-gradient(120% 70% at 50% 42%, var(--bg-lift), var(--bg) 72%);
+  color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;
+}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab;z-index:1;-webkit-touch-callout:none}
+#stage.grabbing{cursor:grabbing}
+body.editing #stage{cursor:default}
+#modeBtn{
+  position:fixed;z-index:3;left:50%;transform:translateX(-50%);
+  bottom:calc(28px + env(safe-area-inset-bottom, 0px));
+  width:56px;height:56px;border:0;border-radius:50%;padding:0;
+  background:transparent;color:var(--icon);cursor:pointer;
+  display:grid;place-items:center;transition:color .2s;
+}
+#modeBtn:hover{color:var(--icon-hi)}
+#modeBtn:focus-visible{outline:2px solid var(--icon-hi);outline-offset:2px}
+#modeBtn svg{width:30px;height:30px;display:block}
+#modeBtn .ic-close{width:34px;height:34px}
+.del{
+  position:fixed;z-index:2;left:0;top:0;
+  width:26px;height:26px;margin:-13px 0 0 -13px;border:0;border-radius:50%;padding:0;
+  background:var(--badge);color:var(--badge-ink);cursor:pointer;
+  display:grid;place-items:center;opacity:0;pointer-events:none;
+  box-shadow:0 1px 4px rgba(0,0,0,.45);
+}
+.del svg{width:12px;height:12px;display:block}
+.del:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+[hidden]{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#fail{position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--icon-hi);z-index:4}
+</style>
+
+<canvas id="stage" aria-label="3D dice. Swipe left or right to switch dice, swipe up or down to roll, long-press a die to choose which dice to show."></canvas>
+<div id="badges"></div>
+<button id="modeBtn" type="button" aria-label="Choose dice">
+  <svg class="ic-gear" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
+  <svg class="ic-close" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>
+</button>
+<div class="sr" aria-live="polite" id="live"></div>
+<div id="fail" hidden>This browser can’t show 3D graphics (WebGL is off).</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(async function(){
+"use strict";
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+try{
+  await Promise.race([document.fonts.load('600 64px "Lexend"'), new Promise(r=>setTimeout(r,1800))]);
+}catch(e){}
+
+const TAU=Math.PI*2, PHI=(1+Math.sqrt(5))/2, IP=1/PHI, INK='#171412';
+const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const rand=(a,b)=>a+Math.random()*(b-a);
+const mod=(a,n)=>((a%n)+n)%n;
+const smooth=t=>t*t*(3-2*t);
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+function combos(x,y,z){const o=[];for(const a of x?[1,-1]:[1])for(const b of y?[1,-1]:[1])for(const c of z?[1,-1]:[1])o.push(V3(x*a,y*b,z*c));return o;}
+function cyc(x,y,z){return [...combos(x,y,z),...combos(z,x,y),...combos(y,z,x)];}
+
+/* ---------- Dice set (colors from the reference art) ---------- */
+const DEFS=[
+  {id:'d4',   color:'#B86FBA', size:1.22, fs:.30},
+  {id:'d6',   color:'#EF8648', size:0.98, fs:.66},
+  {id:'d8',   color:'#D3CFBC', size:1.00, fs:.50},
+  {id:'d10',  color:'#D6AA42', size:1.00, fs:.44},
+  {id:'d12',  color:'#4878C8', size:1.02, fs:.44},
+  {id:'d20',  color:'#B8342B', size:1.06, fs:.33},
+  {id:'d100', color:'#46905A', size:1.00, fs:.34},
+];
+const N=DEFS.length;
+
+function fromNormals(verts, normals){
+  return normals.map(n0=>{
+    const n=n0.clone().normalize();
+    let max=-Infinity; verts.forEach(v=>{max=Math.max(max,v.dot(n));});
+    return {idx:verts.map((v,i)=>i).filter(i=>verts[i].dot(n)>max-1e-3), normal:n};
+  });
+}
+function orderFace(f, verts){
+  const c=V3(0,0,0); f.idx.forEach(i=>c.add(verts[i])); c.divideScalar(f.idx.length);
+  const u=verts[f.idx[0]].clone().sub(c).normalize();
+  const w=new THREE.Vector3().crossVectors(f.normal,u);
+  const ang=i=>{const p=verts[i].clone().sub(c);return Math.atan2(p.dot(w),p.dot(u));};
+  f.idx.sort((a,b)=>ang(a)-ang(b));
+  f.center=c;
+}
+function assignOpposite(faces, n){
+  let k=0;
+  faces.forEach((f,i)=>{
+    if(f.value!=null) return;
+    const j=faces.findIndex((g,jj)=>jj!==i && g.value==null && g.normal.dot(f.normal)<-0.99);
+    f.value=1+k; if(j>=0) faces[j].value=n-k; k++;
+  });
+}
+
+function shape(id){
+  let verts, faces;
+  if(id==='d4'){ verts=[V3(1,1,1),V3(-1,-1,1),V3(-1,1,-1),V3(1,-1,-1)]; faces=fromNormals(verts, verts.map(v=>v.clone().negate())); }
+  else if(id==='d6'){ verts=combos(1,1,1); faces=fromNormals(verts,[V3(1,0,0),V3(-1,0,0),V3(0,1,0),V3(0,-1,0),V3(0,0,1),V3(0,0,-1)]); }
+  else if(id==='d8'){ verts=[V3(1,0,0),V3(-1,0,0),V3(0,1,0),V3(0,-1,0),V3(0,0,1),V3(0,0,-1)]; faces=fromNormals(verts,combos(1,1,1)); }
+  else if(id==='d12'){ verts=[...combos(1,1,1),...cyc(0,IP,PHI)]; faces=fromNormals(verts,cyc(0,PHI,1)); }
+  else if(id==='d20'){ verts=cyc(0,1,PHI); faces=fromNormals(verts,[...combos(1,1,1),...cyc(0,PHI,IP)]); }
+  else {
+    // Pentagonal trapezohedron: pole height chosen so each kite is planar.
+    const c36=Math.cos(Math.PI/5), e=0.11, h=e*(1+c36)/(1-c36);
+    verts=[V3(0,h,0),V3(0,-h,0)];
+    for(let k=0;k<5;k++){const a=TAU*k/5;verts.push(V3(Math.cos(a),e,Math.sin(a)));}
+    for(let k=0;k<5;k++){const a=TAU*(k+.5)/5;verts.push(V3(Math.cos(a),-e,Math.sin(a)));}
+    const U=k=>2+(k%5), L=k=>7+(k%5);
+    faces=[];
+    for(let k=0;k<5;k++) faces.push({idx:[0,U(k),L(k),U(k+1)], pole:0, value:2*k});
+    for(let k=0;k<5;k++) faces.push({idx:[1,L(k),U(k+1),L(k+1)], pole:1, value:9-2*((k+3)%5)});
+    faces.forEach(f=>{
+      const [a,b,c]=f.idx.map(i=>verts[i]);
+      const n=new THREE.Vector3().subVectors(b,a).cross(new THREE.Vector3().subVectors(c,a)).normalize();
+      const ctr=V3(0,0,0); f.idx.forEach(i=>ctr.add(verts[i]));
+      if(n.dot(ctr)<0) n.negate();
+      f.normal=n;
+    });
+  }
+  const m=Math.max(...verts.map(v=>v.length())); verts.forEach(v=>v.divideScalar(m));
+  faces.forEach(f=>orderFace(f,verts));
+  if(id==='d6'||id==='d8'||id==='d12'||id==='d20') assignOpposite(faces, faces.length);
+  faces.forEach(f=>{
+    let t;
+    if(f.pole!=null) t=verts[f.pole].clone();
+    else if(id==='d6') t=verts[f.idx[0]].clone().add(verts[f.idx[1]]).multiplyScalar(.5);
+    else t=verts[f.idx[0]].clone();
+    const up=t.sub(f.center); up.addScaledVector(f.normal,-up.dot(f.normal)).normalize();
+    f.up=up;
+  });
+  return {verts, faces};
+}
+
+const label=(id,v)=> id==='d100' ? (v===0?'00':String(v*10)) : String(v);
+
+function drawNum(g, txt, fs){
+  g.fillText(txt, 0, fs*0.05);
+  if(txt==='6'||txt==='9') g.fillRect(-fs*0.2, fs*0.5, fs*0.4, fs*0.075);
+}
+
+/* ---------- Three.js setup ---------- */
+const canvas=document.getElementById('stage');
+let renderer;
+try{ renderer=new THREE.WebGLRenderer({canvas, antialias:true, alpha:true}); }
+catch(e){ document.getElementById('fail').hidden=false; return; }
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.setClearColor(0x000000,0);
+renderer.autoClear=false;
+const maxAniso=renderer.capabilities.getMaxAnisotropy();
+
+const scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0x0d0d0e, 8, 20);
+scene.add(new THREE.AmbientLight(0xffffff,0.62));
+const key=new THREE.DirectionalLight(0xffffff,0.52); key.position.set(1.6,2.6,4); scene.add(key);
+const rim=new THREE.DirectionalLight(0xffffff,0.16); rim.position.set(-3,-1,-2); scene.add(rim);
+
+const FOV=36;
+const camera=new THREE.PerspectiveCamera(FOV,1,0.1,100);
+
+function buildDie(def){
+  const {verts,faces}=shape(def.id);
+  const n=faces.length, cols=Math.ceil(Math.sqrt(n)), rows=Math.ceil(n/cols), S=256;
+  const cv=document.createElement('canvas'); cv.width=cols*S; cv.height=rows*S;
+  const g=cv.getContext('2d');
+  const Rf=Math.max(...faces[0].idx.map(i=>verts[i].distanceTo(faces[0].center)));
+  const k=0.46*S/Rf;
+  const fs=def.fs*k;
+  const pos=[],nor=[],uv=[];
+  faces.forEach((f,fi)=>{
+    const col=fi%cols,row=Math.floor(fi/cols),cx=(col+.5)*S,cy=(row+.5)*S;
+    const rt=new THREE.Vector3().crossVectors(f.up,f.normal);
+    const p2=f.idx.map(i=>{const d=verts[i].clone().sub(f.center);return [d.dot(rt),d.dot(f.up)];});
+    g.fillStyle=def.color; g.fillRect(col*S,row*S,S,S);
+    g.beginPath();
+    p2.forEach(([x,y],j)=>{const px=cx+x*k,py=cy-y*k; j?g.lineTo(px,py):g.moveTo(px,py);});
+    g.closePath(); g.lineJoin='round'; g.strokeStyle=INK; g.lineWidth=0.05*k; g.stroke();
+    g.fillStyle=INK; g.textAlign='center'; g.textBaseline='middle';
+    g.font=`600 ${fs}px Lexend, system-ui, sans-serif`;
+    if(def.id==='d4'){
+      f.idx.forEach((vi,j)=>{
+        const [x,y]=p2[j];
+        g.save(); g.translate(cx+x*k*0.56, cy-y*k*0.56); g.rotate(Math.atan2(x,y));
+        drawNum(g,String(vi+1),fs); g.restore();
+      });
+    } else {
+      g.save(); g.translate(cx,cy); drawNum(g,label(def.id,f.value),fs); g.restore();
+    }
+    const tri=(a,b,c)=>{
+      let o=[a,b,c];
+      const A=verts[f.idx[a]],B=verts[f.idx[b]],C=verts[f.idx[c]];
+      const cr=new THREE.Vector3().subVectors(B,A).cross(new THREE.Vector3().subVectors(C,A));
+      if(cr.dot(f.normal)<0) o=[a,c,b];
+      o.forEach(j=>{
+        const v=verts[f.idx[j]]; pos.push(v.x,v.y,v.z); nor.push(f.normal.x,f.normal.y,f.normal.z);
+        const [x,y]=p2[j]; uv.push((cx+x*k)/cv.width, 1-(cy-y*k)/cv.height);
+      });
+    };
+    for(let j=1;j<f.idx.length-1;j++) tri(0,j,j+1);
+  });
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  geo.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));
+  geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+  const tex=new THREE.CanvasTexture(cv); tex.anisotropy=maxAniso;
+  const mat=new THREE.MeshLambertMaterial({map:tex, transparent:true});
+  const mesh=new THREE.Mesh(geo,mat);
+  return {verts, faces, mesh, mat};
+}
+
+const TILT=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.2,0.3,0.04));
+const TILT_D20=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.08,0.12,0.02));
+const SHOW_TILT=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35,0.45,0.12));
+function poseFor(d, value, tilt){
+  let f, up;
+  if(d.id==='d4'){
+    const vi=value-1;
+    // Sit like a real d4 on a table: result corner up, one side edge facing
+    // the viewer, seen from a little above.
+    const v=d.verts[vi].clone().normalize();
+    const others=[0,1,2,3].filter(i=>i!==vi);
+    const w=d.verts[others[Math.floor(Math.random()*3)]];
+    const fr=w.clone().addScaledVector(v,-w.dot(v)).normalize();
+    const rr=new THREE.Vector3().crossVectors(v,fr);
+    const m4=new THREE.Matrix4().set(rr.x,rr.y,rr.z,0, v.x,v.y,v.z,0, fr.x,fr.y,fr.z,0, 0,0,0,1);
+    const lean=new THREE.Quaternion().setFromAxisAngle(V3(1,0,0), 0.9);
+    return TILT.clone().multiply(lean).multiply(new THREE.Quaternion().setFromRotationMatrix(m4));
+  }
+  f=d.faces.find(x=>x.value===value); up=f.up;
+  const n=f.normal, r=new THREE.Vector3().crossVectors(up,n);
+  const m=new THREE.Matrix4().set(r.x,r.y,r.z,0, up.x,up.y,up.z,0, n.x,n.y,n.z,0, 0,0,0,1);
+  return (tilt||(d.id==='d20'?TILT_D20:TILT)).clone().multiply(new THREE.Quaternion().setFromRotationMatrix(m));
+}
+function randomValue(d){
+  if(d.id==='d4') return 1+Math.floor(Math.random()*4);
+  return d.faces[Math.floor(Math.random()*d.faces.length)].value;
+}
+const restValue={d4:4,d6:6,d8:8,d10:0,d12:12,d20:20,d100:0};
+
+const dice=DEFS.map((def,i)=>{
+  const b=buildDie(def);
+  const d=Object.assign({}, def, b, {
+    q:new THREE.Quaternion(), idle:rand(0,TAU), idleSpeed:(i%2?-1:1)*rand(.32,.55),
+    idleAxis:V3(rand(-.35,.35),1,rand(-.35,.35)).normalize(),
+    roll:null, pos:V3(0,0,0), vel:V3(0,0,0), pulse:0, w:1, alpha:1, last:null, index:i,
+    sp:V3(0,0,0), ss:1, phase:rand(0,TAU)
+  });
+  d.q.copy(poseFor(d, restValue[def.id]));
+  d.showQ=poseFor(d, restValue[def.id], d.id==='d4'?null:SHOW_TILT);
+  d.mesh.userData.die=i;
+  scene.add(d.mesh);
+  return d;
+});
+
+/* ---------- Which dice are shown (kept per viewer) ---------- */
+const STORE='diceTray.active.v1';
+const order=dice.map((d,i)=>i);
+const active=new Set(order);
+let removed=[];
+const idOf=id=>dice.findIndex(d=>d.id===id);
+try{
+  const saved=JSON.parse(localStorage.getItem(STORE)||'null');
+  const act=Array.isArray(saved)?saved:(saved&&Array.isArray(saved.active)?saved.active:null);
+  if(saved&&Array.isArray(saved.order)){
+    const o=saved.order.map(idOf).filter(i=>i>=0);
+    order.forEach(i=>{ if(!o.includes(i)) o.push(i); });
+    order.splice(0,order.length,...o);
+  }
+  if(act){
+    const ids=new Set(act);
+    if(order.some(i=>ids.has(dice[i].id))) order.forEach(i=>{ if(!ids.has(dice[i].id)){ active.delete(i); removed.push(i); } });
+  }
+}catch(e){}
+function save(){ try{ localStorage.setItem(STORE, JSON.stringify({order:order.map(i=>dice[i].id), active:order.filter(i=>active.has(i)).map(i=>dice[i].id)})); }catch(e){} }
+let ringList=order.filter(i=>active.has(i));
+const refreshRing=()=>{ ringList=order.filter(i=>active.has(i)); };
+
+/* ---------- Depth-of-field: back dice render to a small target, then blur ---------- */
+const rt=new THREE.WebGLRenderTarget(4,4);
+const quadMat=new THREE.ShaderMaterial({
+  uniforms:{t:{value:rt.texture}, texel:{value:new THREE.Vector2(1/4,1/4)}, dim:{value:0.82}},
+  vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}',
+  fragmentShader:`uniform sampler2D t;uniform vec2 texel;uniform float dim;varying vec2 vUv;
+    void main(){vec4 c=vec4(0.);float tot=0.;
+      for(int x=-2;x<=2;x++)for(int y=-2;y<=2;y++){
+        float w=exp(-float(x*x+y*y)/4.5);c+=texture2D(t,vUv+vec2(float(x),float(y))*texel*1.5)*w;tot+=w;}
+      c/=tot;gl_FragColor=vec4(c.rgb*dim,c.a);}`,
+  transparent:true, depthTest:false, depthWrite:false,
+  blending:THREE.CustomBlending, blendSrc:THREE.OneFactor, blendDst:THREE.OneMinusSrcAlphaFactor
+});
+const quadScene=new THREE.Scene();
+quadScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),quadMat));
+const quadCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
+
+function setPass(sharp){
+  dice.forEach(d=>{
+    const a=(sharp?d.w:1-d.w)*d.alpha;
+    d.mesh.visible=a>0.01; d.mat.opacity=a;
+  });
+}
+function render(){
+  setPass(false);
+  renderer.setRenderTarget(rt); renderer.clear(); renderer.render(scene,camera);
+  renderer.setRenderTarget(null); renderer.clear(); renderer.render(quadScene,quadCam);
+  setPass(true); renderer.clearDepth(); renderer.render(scene,camera);
+}
+
+/* ---------- Layout ---------- */
+const BX=0.45, BY=0.5, RAD=1.15;
+let W=0,H=0,ppu=100,cy=0,R=2.6,LIFT=0.6,camDist=12;
+function layout(){
+  W=innerWidth; H=innerHeight;
+  renderer.setSize(W,H,false);
+  const db=renderer.getDrawingBufferSize(new THREE.Vector2());
+  const rw=Math.max(2,Math.floor(db.x/4)), rh=Math.max(2,Math.floor(db.y/4));
+  rt.setSize(rw,rh); quadMat.uniforms.texel.value.set(1/rw,1/rh);
+  const topRes=40, botRes=40;
+  const avail=Math.max(160,H-topRes-botRes);
+  ppu=Math.min(avail/(2*(BY+RAD)), 0.88*W/(2*(BX+RAD)), 150);
+  cy=topRes+avail/2;
+  const dist=H/(2*ppu*Math.tan(FOV/2*Math.PI/180));
+  camDist=dist;
+  camera.aspect=W/H; camera.position.set(0,0,dist); camera.lookAt(0,0,0);
+  camera.setViewOffset(W,H,0,H/2-cy,W,H); camera.updateProjectionMatrix();
+  R=clamp((W/2/ppu)*1.12,2.4,4.2); LIFT=0.5*R;
+  scene.fog.near=dist+0.4; scene.fog.far=dist+2*R+1.6;
+}
+addEventListener('resize',layout);
+layout();
+
+/* ---------- Ring + rolling ---------- */
+const live=document.getElementById('live');
+let ringPos=Math.max(0,ringList.indexOf(5)), ringTarget=ringPos;
+const frontIndex=()=>ringList[mod(Math.round(ringPos),ringList.length)];
+function goTo(i){
+  const n=ringList.length, k=ringList.indexOf(i); if(k<0) return;
+  const cur=Math.round(ringTarget);
+  let delta=mod(k-mod(cur,n),n); if(delta>n/2) delta-=n;
+  ringTarget=cur+delta;
+}
+let shownFront=-1;
+function updateFront(front){
+  if(shownFront>=0) dice[shownFront].last=null; // forget the result of the die we leave
+  shownFront=front;
+}
+function startRoll(d, dir, power){
+  if(d.roll) return;
+  const value=randomValue(d), qf=poseFor(d,value);
+  const turns=reduced?1:2+Math.round(power*3);
+  d.roll={t:0, D:reduced?0.6:1.2+turns*0.2, q0:d.q.clone(), qf,
+    a1:V3(1,0,0), th1:dir*turns*TAU,
+    a2:V3(rand(-.5,.5),1,rand(-.4,.4)).normalize(), th2:(Math.random()<.5?-1:1)*TAU*(turns>3?2:1),
+    value};
+  d.vel.set(rand(-1.4,1.4), dir*(reduced?0.8:3+power*3), 0);
+}
+function finishRoll(d,value){
+  if(d.index!==shownFront) return; // swiped away mid-roll: forget it
+  d.last=value;
+  live.textContent=`${d.id} rolled ${label(d.id,value)}`;
+}
+const qa=new THREE.Quaternion(), qb=new THREE.Quaternion(), qc=new THREE.Quaternion();
+function updateRoll(d,dt){
+  const r=d.roll;
+  if(r){
+    r.t=Math.min(1,r.t+dt/r.D); const t=r.t;
+    const e1=1-Math.pow(1-t,3), e2=1-Math.pow(1-Math.min(1,t*1.2),3);
+    qa.copy(r.q0).slerp(r.qf, smooth(Math.min(1,t/0.8)));
+    qb.setFromAxisAngle(r.a1, r.th1*(1-e1));
+    qc.setFromAxisAngle(r.a2, r.th2*(1-e2));
+    d.q.copy(qc).multiply(qb).multiply(qa);
+    d.pos.addScaledVector(d.vel,dt);
+    const fast=d.vel.length()>0.6;
+    if(Math.abs(d.pos.x)>BX){ d.pos.x=Math.sign(d.pos.x)*BX; d.vel.x*=-0.72; if(fast) d.pulse=1; }
+    if(Math.abs(d.pos.y)>BY){ d.pos.y=Math.sign(d.pos.y)*BY; d.vel.y*=-0.72; if(fast) d.pulse=1; }
+    d.vel.multiplyScalar(Math.exp(-1.6*dt));
+    d.vel.addScaledVector(d.pos,-18*t*t*dt);
+    if(t>=1){ d.q.copy(r.qf); d.roll=null; finishRoll(d,r.value); }
+  } else {
+    d.pos.multiplyScalar(Math.exp(-7*dt)); d.vel.set(0,0,0);
+  }
+  d.pulse*=Math.exp(-9*dt);
+}
+
+/* ---------- Edit mode: line of active dice, pile of removed ones ---------- */
+let editing=false, modeT=0, editAnchor=5, lineArr=[], dragging=null;
+const PILE=[[-0.5,0],[0.5,0.45],[0.5,-0.55],[-0.5,-1.0],[1.5,0],[-1.5,-0.5]];
+function editLine(){
+  const n=ringList.length, a=order.indexOf(editAnchor);
+  const L=[]; for(let j=0;j<N;j++){ const i=order[(a+j)%N]; if(active.has(i)) L.push(i); }
+  const k=Math.floor((n-1)/2);
+  return {line:L.slice(n-k).concat(L.slice(0,n-k)), center:k};
+}
+const toWorldY=py=>(cy-py)/ppu, toWorldX=px=>(px-W/2)/ppu;
+const lineSpacing=n=>Math.min(130,(W-16)/n);
+const lineDiam=n=>Math.min(108, lineSpacing(n)*0.86);
+// Row sits in the upper part of the screen; the pile fits between the row's badges and the close button.
+function geom(n){
+  const ly=H*0.36, LD=lineDiam(Math.max(1,n));
+  const top=ly+LD*0.5+34, bottom=H-112;
+  const PD=clamp(Math.min(W*0.15,(bottom-top)/2.92),40,84), u=PD*1.32;
+  const h=1.45*u+PD, blockTop=top+Math.max(0,(bottom-top-h)*0.35);
+  return {PD, u, ly, pileY:blockTop+PD/2+0.45*u};
+}
+function editTargets(){
+  const out=new Map();
+  let line=(editing?lineArr:editLine().line).slice(), pile=removed.slice();
+  if(dragging&&dragging.moving){
+    // Open a gap where the held die would land
+    const i=dragging.i;
+    line=line.filter(x=>x!==i);
+    if(dragging.zone==='line'){ line.splice(dragging.slot,0,i); pile=pile.filter(x=>x!==i); }
+    else if(dragging.from==='line') pile.push(i);
+  }
+  const n=line.length, sp=lineSpacing(n), D=lineDiam(n), G=geom(n);
+  line.forEach((i,j)=>out.set(i,{x:toWorldX(W/2+(j-(n-1)/2)*sp), y:toWorldY(G.ly), D}));
+  pile.forEach((i,j)=>{
+    const [sx,sy]=PILE[j%PILE.length];
+    out.set(i,{x:toWorldX(W/2+sx*G.u), y:toWorldY(G.pileY-sy*G.u), D:G.PD});
+  });
+  return out;
+}
+function updateDragZone(){
+  const g=dragging, G=geom(lineArr.length);
+  const others=lineArr.filter(x=>x!==g.i);
+  let zone=g.py<(G.ly+G.pileY-G.u*0.5)/2?'line':'pile';
+  if(g.from==='line'&&others.length<1) zone='line';
+  g.zone=zone;
+  if(zone==='line'){
+    const n=others.length+1, sp=lineSpacing(n);
+    g.slot=clamp(Math.round((g.px-W/2)/sp+(n-1)/2),0,n-1);
+  }
+}
+// Mesh scale that makes a die about D px wide on screen.
+const scaleFor=(d,D)=>d.size/1.06*D/(1.8*ppu);
+
+const modeBtn=document.getElementById('modeBtn');
+const icGear=modeBtn.querySelector('.ic-gear'), icClose=modeBtn.querySelector('.ic-close');
+function syncOrder(){ order.splice(0,order.length,...lineArr,...removed); refreshRing(); save(); }
+function enterEdit(){
+  if(editing) return;
+  editAnchor=frontIndex(); lineArr=editLine().line; editing=true; dragging=null;
+  const tg=editTargets();
+  dice.forEach(d=>{ const t=tg.get(d.index); d.sp.set(t.x,t.y,0); d.ss=scaleFor(d,t.D); });
+  document.body.classList.add('editing');
+  icGear.setAttribute('hidden',''); icClose.removeAttribute('hidden'); modeBtn.setAttribute('aria-label','Done');
+  live.textContent='Choose dice. Drag to reorder, tap × to hide a die, tap a hidden die to bring it back.';
+  try{ navigator.vibrate&&navigator.vibrate(12); }catch(e){}
+}
+function exitEdit(){
+  if(!editing) return;
+  dragging=null;
+  const front=lineArr[Math.floor((lineArr.length-1)/2)];
+  editing=false;
+  ringPos=ringTarget=Math.max(0,ringList.indexOf(front));
+  document.body.classList.remove('editing');
+  icGear.removeAttribute('hidden'); icClose.setAttribute('hidden',''); modeBtn.setAttribute('aria-label','Choose dice');
+  live.textContent='';
+}
+modeBtn.addEventListener('click',()=>editing?exitEdit():enterEdit());
+
+function removeDie(i){
+  if(!editing||!active.has(i)||lineArr.length<=1) return;
+  lineArr=lineArr.filter(x=>x!==i); active.delete(i); removed.push(i); syncOrder();
+  live.textContent=`${dice[i].id} hidden`;
+}
+function addDie(i){
+  if(!editing||active.has(i)) return;
+  lineArr.push(i); active.add(i); removed=removed.filter(x=>x!==i); syncOrder();
+  live.textContent=`${dice[i].id} shown`;
+}
+function commitDrag(){
+  const g=dragging; dragging=null;
+  if(!g||!g.moving) return;
+  const i=g.i;
+  if(g.zone==='line'){
+    lineArr=lineArr.filter(x=>x!==i); lineArr.splice(g.slot,0,i);
+    if(g.from==='pile'){ active.add(i); removed=removed.filter(x=>x!==i); live.textContent=`${dice[i].id} shown`; }
+  } else if(g.from==='line'){
+    lineArr=lineArr.filter(x=>x!==i); active.delete(i); removed.push(i); live.textContent=`${dice[i].id} hidden`;
+  }
+  syncOrder();
+}
+
+const XSVG='<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>';
+const badges=dice.map(d=>{
+  const b=document.createElement('button'); b.type='button'; b.className='del'; b.id='del-'+d.id;
+  b.setAttribute('aria-label','Hide '+d.id); b.innerHTML=XSVG; b.tabIndex=-1;
+  b.addEventListener('click',e=>{ e.stopPropagation(); removeDie(d.index); });
+  document.getElementById('badges').appendChild(b); return b;
+});
+const proj=new THREE.Vector3();
+
+/* ---------- Input ---------- */
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+let drag=null, pressTimer=0;
+const pxStep=()=>Math.min(W*0.5,260);
+function pick(x,y,filter){
+  ndc.set(x/W*2-1, -(y/H)*2+1);
+  ray.setFromCamera(ndc,camera);
+  const list=dice.filter(filter).map(d=>d.mesh);
+  const vis=list.map(m=>m.visible); list.forEach(m=>{m.visible=true;});
+  const hits=ray.intersectObjects(list);
+  list.forEach((m,j)=>{m.visible=vis[j];});
+  return hits.length?hits[0].object.userData.die:-1;
+}
+canvas.addEventListener('pointerdown',e=>{
+  if(drag) return;
+  const t=performance.now();
+  drag={id:e.pointerId,x0:e.clientX,y0:e.clientY,mode:null,ring0:ringPos,used:false,s:[{x:e.clientX,y:e.clientY,t}]};
+  try{canvas.setPointerCapture(e.pointerId);}catch(_){}
+  clearTimeout(pressTimer);
+  if(editing){
+    const i=pick(e.clientX,e.clientY,d=>d.alpha>0.5);
+    dragging=i>=0?{i, from:active.has(i)?'line':'pile', px:e.clientX, py:e.clientY, moving:false, zone:null, slot:0}:null;
+  } else {
+    const dd=drag;
+    pressTimer=setTimeout(()=>{
+      if(drag!==dd||dd.mode) return;
+      const i=pick(dd.x0,dd.y0,d=>active.has(d.index)&&d.alpha*Math.max(d.w,0.4)>0.2);
+      if(i>=0){ dd.used=true; enterEdit(); }
+    },480);
+  }
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!drag||e.pointerId!==drag.id) return;
+  const dx=e.clientX-drag.x0, dy=e.clientY-drag.y0, t=performance.now();
+  if(editing&&dragging){
+    dragging.px=e.clientX; dragging.py=e.clientY;
+    if(!dragging.moving&&Math.hypot(dx,dy)>6){ dragging.moving=true; canvas.classList.add('grabbing'); }
+    if(dragging.moving) updateDragZone();
+  }
+  if(!drag.mode && Math.hypot(dx,dy)>8){
+    clearTimeout(pressTimer);
+    drag.mode=Math.abs(dx)>Math.abs(dy)?'h':'v';
+    if(drag.mode==='h'){ drag.ring0=ringPos; drag.x0=e.clientX; if(!editing&&ringList.length>1) canvas.classList.add('grabbing'); }
+  }
+  if(drag.mode==='h' && !editing && !drag.used && ringList.length>1) ringPos=drag.ring0-(e.clientX-drag.x0)/pxStep();
+  drag.s.push({x:e.clientX,y:e.clientY,t});
+  while(drag.s.length>2 && t-drag.s[0].t>100) drag.s.shift();
+});
+function endDrag(e,cancel){
+  if(!drag||e.pointerId!==drag.id) return;
+  clearTimeout(pressTimer);
+  const s=drag.s, a=s[0], b=s[s.length-1], dt=Math.max(1,b.t-a.t);
+  const vx=(b.x-a.x)/dt, vy=(b.y-a.y)/dt;
+  const dy=e.clientY-drag.y0;
+  if(drag.used){ /* long-press already handled */ }
+  else if(editing){
+    if(dragging&&dragging.moving){ if(cancel) dragging=null; else commitDrag(); }
+    else { const g=dragging; dragging=null; if(!drag.mode&&!cancel&&g&&g.from==='pile') addDie(g.i); }
+  } else if(drag.mode==='h'){
+    if(ringList.length>1){
+      let tgt=Math.round(ringPos-(cancel?0:vx*220/pxStep()));
+      const base=Math.round(drag.ring0); ringTarget=clamp(tgt,base-2,base+2);
+    }
+  } else if(drag.mode==='v' && !cancel){
+    if(Math.abs(dy)>28||Math.abs(vy)>0.35) startRoll(dice[frontIndex()], dy<0?1:-1, clamp(Math.abs(vy)/2.2,0,1));
+  } else if(!drag.mode && !cancel){
+    const i=pick(e.clientX,e.clientY,d=>active.has(d.index));
+    if(i>=0){ if(i===frontIndex()) startRoll(dice[i],1,0.45); else goTo(i); }
+  }
+  canvas.classList.remove('grabbing');
+  drag=null;
+}
+canvas.addEventListener('pointerup',e=>endDrag(e,false));
+canvas.addEventListener('pointercancel',e=>endDrag(e,true));
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+addEventListener('keydown',e=>{
+  if(editing){ if(e.key==='Escape'){ exitEdit(); e.preventDefault(); } return; }
+  if(e.key==='ArrowRight'){ ringTarget=Math.round(ringTarget)+1; e.preventDefault(); }
+  else if(e.key==='ArrowLeft'){ ringTarget=Math.round(ringTarget)-1; e.preventDefault(); }
+  else if(e.key==='ArrowUp'||(e.key===' '&&e.target===document.body)){ startRoll(dice[frontIndex()],1,0.6); e.preventDefault(); }
+  else if(e.key==='ArrowDown'){ startRoll(dice[frontIndex()],-1,0.6); e.preventDefault(); }
+});
+
+/* ---------- Loop ---------- */
+let last=performance.now(), time=0;
+const qRing=new THREE.Quaternion(), qEdit=new THREE.Quaternion(), qJig=new THREE.Quaternion(), ZAX=V3(0,0,1);
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now; time+=dt;
+  modeT+=((editing?1:0)-modeT)*(1-Math.exp(-(reduced?30:8)*dt));
+  const e=smooth(clamp(modeT,0,1));
+  if(!drag||drag.mode!=='h'||editing) ringPos+=(ringTarget-ringPos)*(1-Math.exp(-(reduced?24:9)*dt));
+  const n=ringList.length, step=TAU/n;
+  const front=frontIndex();
+  if(front!==shownFront) updateFront(front);
+  const tg=editTargets(), slide=1-Math.exp(-(reduced?40:11)*dt);
+  dice.forEach((d,i)=>{
+    const isActive=active.has(i);
+    // Edit-mode target (line or pile)
+    const t=tg.get(i);
+    const held=!!(dragging&&dragging.moving&&dragging.i===i);
+    if(held){
+      const k=(camDist-0.6)/camDist;
+      d.sp.set(toWorldX(dragging.px)*k, toWorldY(dragging.py)*k, 0.6);
+      d.ss=lerp(d.ss,scaleFor(d,t.D*1.12),slide);
+    } else {
+      d.sp.x=lerp(d.sp.x,t.x,slide); d.sp.y=lerp(d.sp.y,t.y,slide); d.sp.z=lerp(d.sp.z,0,slide);
+      d.ss=lerp(d.ss,scaleFor(d,t.D),slide);
+    }
+    // Ring pose
+    let rx,ry,rz,rs,rw;
+    if(isActive){
+      const k=ringList.indexOf(i), a=(k-ringPos)*step, c=Math.cos(a);
+      rx=R*Math.sin(a); rz=R*(c-1); ry=(1-c)*LIFT;
+      rw=clamp(1+rz/0.7,0,1);
+      if(i===front){ const g=Math.round(d.idle/TAU)*TAU; d.idle+=(g-d.idle)*(1-Math.exp(-5*dt)); }
+      else if(!reduced) d.idle+=dt*d.idleSpeed;
+      const bob=(i===front&&!d.roll&&!reduced&&!editing)?Math.sin(time*1.4)*0.035:0;
+      rx+=d.pos.x; ry+=d.pos.y+bob;
+      rs=d.size*(0.8+0.2*Math.pow(Math.max(0,c),6))*(1-0.07*d.pulse);
+    } else {
+      rx=d.sp.x; ry=d.sp.y; rz=d.sp.z; rs=d.ss; rw=1;
+    }
+    updateRoll(d,dt);
+    // Blend ring and edit poses
+    qRing.setFromAxisAngle(d.idleAxis,d.idle).multiply(d.q);
+    const jig=(isActive&&editing&&!reduced&&!held)?Math.sin(time*19+d.phase)*0.055:0;
+    // Hidden dice in the pile float gently: slow bob plus a lazy sway
+    const floating=!isActive&&!held&&!reduced;
+    if(floating) qJig.setFromAxisAngle(d.idleAxis, Math.sin(time*0.9+d.phase)*0.16);
+    else qJig.setFromAxisAngle(ZAX,jig);
+    qEdit.copy(qJig).multiply(d.showQ);
+    const fy=floating?Math.sin(time*1.4+d.phase)*6/ppu:0;
+    d.mesh.quaternion.copy(qRing).slerp(qEdit,e);
+    d.mesh.position.set(lerp(rx,d.sp.x,e), lerp(ry,d.sp.y+fy,e), lerp(rz,d.sp.z,e));
+    d.mesh.scale.setScalar(lerp(rs,d.ss,e));
+    d.w=lerp(rw,1,e);
+    d.alpha=isActive?1:e;
+    // Remove badge under each active die
+    const b=badges[i], show=editing&&isActive&&n>1&&!held;
+    if(show||parseFloat(b.style.opacity||0)>0){
+      proj.copy(d.mesh.position).project(camera);
+      const px=(proj.x+1)/2*W, py=(1-proj.y)/2*H, D=t.D;
+      b.style.transform=`translate(${px}px,${py+D*0.46}px)`;
+      b.style.opacity=show?e.toFixed(3):'0';
+      b.style.pointerEvents=show&&e>0.8?'auto':'none';
+      b.tabIndex=show?0:-1;
+    }
+  });
+  render();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
