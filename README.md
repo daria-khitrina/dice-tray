@@ -8,4 +8,4 @@ Single self-contained `index.html`, no build step.
 
 ## Credits
 
-Dice rendering approach inspired by [3d-dice/dice-box-threejs](https://github.com/3d-dice/dice-box-threejs).
+Dice rendering approach inspired by [ChefJulio/react-3d-dice](https://github.com/ChefJulio/react-3d-dice).
