@@ -348,6 +348,11 @@ function render(){
 const BX=0.45, BY=0.5, RAD=1.15;
 let W=0,H=0,ppu=100,cy=0,R=2.6,LIFT=0.6,camDist=12;
 function layout(){
+  // Live window-resize drags can briefly report a 0 width/height mid-animation.
+  // Dividing by that zero would permanently corrupt R/LIFT to NaN (nothing to
+  // undo it once the drag's last event is the glitched one) — so just keep
+  // the last good layout until a real size comes through.
+  if(innerWidth<=0||innerHeight<=0) return;
   W=innerWidth; H=innerHeight;
   renderer.setSize(W,H,false);
   const db=renderer.getDrawingBufferSize(new THREE.Vector2());
