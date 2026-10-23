@@ -1,9 +1,8 @@
-# Dice Tray
+# Simple Dice Tray
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A 3D dice roller for tabletop games — d4, d6, d8, d10, d12, d20, d100 — rendered with [Three.js](https://threejs.org/). No build step, no dependencies to install: just `index.html`, `style.css` and a few scripts in `js/`. 
-
 
 **Live demo: [dice.dariakhitrina.com](https://dice.dariakhitrina.com)**
 
