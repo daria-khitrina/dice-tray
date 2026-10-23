@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A 3D dice roller for tabletop games — d4, d6, d8, d10, d12, d20, d100 — rendered with [Three.js](https://threejs.org/). No build step, no dependencies to install: a single self-contained `index.html`.
+A 3D dice roller for tabletop games — d4, d6, d8, d10, d12, d20, d100 — rendered with [Three.js](https://threejs.org/). No build step, no dependencies to install: just `index.html`, `style.css` and a few scripts in `js/`. No file in the repo may exceed 500 lines (`scripts/check-line-limit.sh`, enforced in CI).
 
 <p align="center">
   <img src="docs/demo.gif" alt="Dice Tray demo: spinning the dice ring and rolling a d20" width="280">
