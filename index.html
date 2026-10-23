@@ -504,7 +504,7 @@ function drawIcon(p){
 }
 function morphIcon(to){
   cancelAnimationFrame(iconRaf);
-  const from=iconP, t0=performance.now(), dur=reduceMotion.matches||!iconFns?0:450;
+  const from=iconP, t0=performance.now(), dur=reduceMotion.matches||!iconFns?0:200;
   const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
   (function step(now){
     const k=dur?Math.min(1,(now-t0)/dur):1;
