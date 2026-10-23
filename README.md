@@ -36,9 +36,9 @@ python3 -m http.server 8000
 
 Three.js (r128) and the Lexend font are loaded from CDNs, so an internet connection is needed.
 
-## Contributing
+## Contributions
 
-Issues and pull requests are welcome. Keep it dependency-free and in a single `index.html`.
+This is a personal project and I'm not accepting issues or pull requests. You're welcome to fork or copy it and do whatever you like with it, under the MIT license.
 
 ## License
 
