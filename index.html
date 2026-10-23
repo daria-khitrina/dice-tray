@@ -470,8 +470,26 @@ function editTargets(){
   });
   return out;
 }
+// Haptics: Vibration API where available (Android); iOS Safari 17.4+ has no vibrate(), but toggling a
+// hidden <input switch> via its label fires the system haptic.
+let hapticLabel=null;
+function haptic(ms){
+  try{
+    if(navigator.vibrate){ navigator.vibrate(ms); return; }
+    if(!hapticLabel){
+      const inp=document.createElement('input');
+      inp.type='checkbox'; inp.setAttribute('switch',''); inp.id='hapticSwitch'; inp.tabIndex=-1;
+      hapticLabel=document.createElement('label');
+      hapticLabel.htmlFor=inp.id; hapticLabel.setAttribute('aria-hidden','true');
+      hapticLabel.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+      hapticLabel.appendChild(inp); document.body.appendChild(hapticLabel);
+    }
+    hapticLabel.click();
+  }catch(e){}
+}
 function updateDragZone(){
   const g=dragging, G=geom(lineArr.length);
+  const prevZone=g.zone, prevSlot=g.slot;
   const others=lineArr.filter(x=>x!==g.i);
   let zone=g.py<(G.ly+G.pileY-G.u*0.5)/2?'line':'pile';
   if(g.from==='line'&&others.length<1) zone='line';
@@ -480,6 +498,8 @@ function updateDragZone(){
     const n=others.length+1, sp=lineSpacing(n);
     g.slot=clamp(Math.round((g.px-W/2)/sp+(n-1)/2),0,n-1);
   }
+  // Light tick when the held die crosses into a new slot or the other zone (not on the first call).
+  if(prevZone!==null&&(zone!==prevZone||(zone==='line'&&g.slot!==prevSlot))) haptic(4);
 }
 // Mesh scale that makes a die about D px wide on screen.
 const scaleFor=(d,D)=>d.size/1.06*D/(1.8*ppu);
@@ -523,7 +543,7 @@ function enterEdit(){
   document.body.classList.add('editing');
   morphIcon(1); modeBtn.setAttribute('aria-label','Done');
   live.textContent='Choose dice. Drag to reorder, tap × to hide a die, tap a hidden die to bring it back.';
-  try{ navigator.vibrate&&navigator.vibrate(12); }catch(e){}
+  haptic(12);
 }
 function exitEdit(){
   if(!editing) return;
@@ -558,6 +578,7 @@ function commitDrag(){
     lineArr=lineArr.filter(x=>x!==i); active.delete(i); removed.push(i); live.textContent=`${dice[i].id} hidden`;
   }
   syncOrder();
+  haptic(12);
 }
 
 const XSVG='<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>';
