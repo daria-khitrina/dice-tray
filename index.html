@@ -66,7 +66,7 @@ body.editing #stage{cursor:default}
 <canvas id="stage" aria-label="3D dice. Swipe left or right to switch dice, swipe up or down to roll, long-press a die to choose which dice to show."></canvas>
 <div id="badges"></div>
 <button id="modeBtn" type="button" aria-label="Choose dice">
-  <svg viewBox="0 0 24 24" aria-hidden="true"><g id="icMorph"><path id="icOuter" fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.01-1.58z"/><path id="icHole" fill="currentColor" d="M12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></g></svg>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><g id="icMorph"><path id="icPath" fill="currentColor" fill-rule="evenodd" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.01-1.58z M12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></g></svg>
 </button>
 <div class="sr" aria-live="polite" id="live"></div>
 <div id="fail" hidden>This browser can’t show 3D graphics (WebGL is off).</div>
@@ -486,10 +486,11 @@ const scaleFor=(d,D)=>d.size/1.06*D/(1.8*ppu);
 
 const modeBtn=document.getElementById('modeBtn');
 // Gear <-> close icon morph (Flubber). The close X is a filled polygon; the gear's centre hole collapses to a dot.
-const icMorph=document.getElementById('icMorph'), icOuter=document.getElementById('icOuter'), icHole=document.getElementById('icHole');
+const icMorph=document.getElementById('icMorph'), icPath=document.getElementById('icPath');
+const [gearOuter,gearHole]=icPath.getAttribute('d').split(/(?=M12 15\.6)/);
 const ICON={
-  gear:{outer:icOuter.getAttribute('d'),hole:icHole.getAttribute('d')},
-  close:{outer:'M4.15 5.85L5.85 4.15L12 10.3L18.15 4.15L19.85 5.85L13.7 12L19.85 18.15L18.15 19.85L12 13.7L5.85 19.85L4.15 18.15L10.3 12Z',hole:'M12 12.3A.3.3 0 1 1 12 11.7a.3.3 0 0 1 0 .6z'}
+  gear:{outer:gearOuter,hole:gearHole},
+  close:{outer:'M4.15 5.85L5.85 4.15L12 10.3L18.15 4.15L19.85 5.85L13.7 12L19.85 18.15L18.15 19.85L12 13.7L5.85 19.85L4.15 18.15L10.3 12Z',hole:'M12 12.02A.02.02 0 1 1 12 11.98a.02.02 0 0 1 0 .04z'}
 };
 const iconFns=window.flubber&&{
   outer:flubber.interpolate(ICON.gear.outer,ICON.close.outer,{maxSegmentLength:1}),
@@ -499,8 +500,9 @@ const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
 let iconP=0, iconRaf=0;
 function drawIcon(p){
   iconP=p;
-  if(iconFns){ icOuter.setAttribute('d',iconFns.outer(p)); icHole.setAttribute('d',iconFns.hole(p)); icMorph.style.transform='rotate('+p*90+'deg)'; }
-  else{ const k=p>=.5?'close':'gear'; icOuter.setAttribute('d',ICON[k].outer); icHole.setAttribute('d',ICON[k].hole); }
+  // Both rings live in one even-odd path so the hole cuts out of the gear; the X has no hole.
+  if(iconFns){ icPath.setAttribute('d',iconFns.outer(p)+(p<1?iconFns.hole(p):'')); icMorph.style.transform='rotate('+p*90+'deg)'; }
+  else{ const k=p>=.5?'close':'gear'; icPath.setAttribute('d',ICON[k].outer+(k==='gear'?ICON[k].hole:'')); }
 }
 function morphIcon(to){
   cancelAnimationFrame(iconRaf);
