@@ -48,7 +48,7 @@ body.editing #stage{cursor:default}
 #modeBtn:hover{color:var(--icon-hi)}
 #modeBtn:focus-visible{outline:2px solid var(--icon-hi);outline-offset:2px}
 #modeBtn svg{width:30px;height:30px;display:block}
-#modeBtn .ic-close{width:34px;height:34px}
+#icMorph{transform-origin:12px 12px}
 .del{
   position:fixed;z-index:2;left:0;top:0;
   width:26px;height:26px;margin:-13px 0 0 -13px;border:0;border-radius:50%;padding:0;
@@ -66,13 +66,13 @@ body.editing #stage{cursor:default}
 <canvas id="stage" aria-label="3D dice. Swipe left or right to switch dice, swipe up or down to roll, long-press a die to choose which dice to show."></canvas>
 <div id="badges"></div>
 <button id="modeBtn" type="button" aria-label="Choose dice">
-  <svg class="ic-gear" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
-  <svg class="ic-close" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><g id="icMorph"><path id="icOuter" fill="currentColor" d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.74 8.87a.47.47 0 0 0 .12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 0 0-.12-.61l-2.01-1.58z"/><path id="icHole" fill="currentColor" d="M12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></g></svg>
 </button>
 <div class="sr" aria-live="polite" id="live"></div>
 <div id="fail" hidden>This browser can’t show 3D graphics (WebGL is off).</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flubber@0.4.2/build/flubber.min.js"></script>
 <script>
 (async function(){
 "use strict";
@@ -485,7 +485,33 @@ function updateDragZone(){
 const scaleFor=(d,D)=>d.size/1.06*D/(1.8*ppu);
 
 const modeBtn=document.getElementById('modeBtn');
-const icGear=modeBtn.querySelector('.ic-gear'), icClose=modeBtn.querySelector('.ic-close');
+// Gear <-> close icon morph (Flubber). The close X is a filled polygon; the gear's centre hole collapses to a dot.
+const icMorph=document.getElementById('icMorph'), icOuter=document.getElementById('icOuter'), icHole=document.getElementById('icHole');
+const ICON={
+  gear:{outer:icOuter.getAttribute('d'),hole:icHole.getAttribute('d')},
+  close:{outer:'M4.15 5.85L5.85 4.15L12 10.3L18.15 4.15L19.85 5.85L13.7 12L19.85 18.15L18.15 19.85L12 13.7L5.85 19.85L4.15 18.15L10.3 12Z',hole:'M12 12.3A.3.3 0 1 1 12 11.7a.3.3 0 0 1 0 .6z'}
+};
+const iconFns=window.flubber&&{
+  outer:flubber.interpolate(ICON.gear.outer,ICON.close.outer,{maxSegmentLength:1}),
+  hole:flubber.interpolate(ICON.gear.hole,ICON.close.hole,{maxSegmentLength:1})
+};
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
+let iconP=0, iconRaf=0;
+function drawIcon(p){
+  iconP=p;
+  if(iconFns){ icOuter.setAttribute('d',iconFns.outer(p)); icHole.setAttribute('d',iconFns.hole(p)); icMorph.style.transform='rotate('+p*90+'deg)'; }
+  else{ const k=p>=.5?'close':'gear'; icOuter.setAttribute('d',ICON[k].outer); icHole.setAttribute('d',ICON[k].hole); }
+}
+function morphIcon(to){
+  cancelAnimationFrame(iconRaf);
+  const from=iconP, t0=performance.now(), dur=reduceMotion.matches||!iconFns?0:200;
+  const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+  (function step(now){
+    const k=dur?Math.min(1,(now-t0)/dur):1;
+    drawIcon(from+(to-from)*ease(k));
+    if(k<1) iconRaf=requestAnimationFrame(step);
+  })(t0);
+}
 function syncOrder(){ order.splice(0,order.length,...lineArr,...removed); refreshRing(); save(); }
 function enterEdit(){
   if(editing) return;
@@ -493,7 +519,7 @@ function enterEdit(){
   const tg=editTargets();
   dice.forEach(d=>{ const t=tg.get(d.index); d.sp.set(t.x,t.y,0); d.ss=scaleFor(d,t.D); });
   document.body.classList.add('editing');
-  icGear.setAttribute('hidden',''); icClose.removeAttribute('hidden'); modeBtn.setAttribute('aria-label','Done');
+  morphIcon(1); modeBtn.setAttribute('aria-label','Done');
   live.textContent='Choose dice. Drag to reorder, tap × to hide a die, tap a hidden die to bring it back.';
   try{ navigator.vibrate&&navigator.vibrate(12); }catch(e){}
 }
@@ -504,7 +530,7 @@ function exitEdit(){
   editing=false;
   ringPos=ringTarget=Math.max(0,ringList.indexOf(front));
   document.body.classList.remove('editing');
-  icGear.removeAttribute('hidden'); icClose.setAttribute('hidden',''); modeBtn.setAttribute('aria-label','Choose dice');
+  morphIcon(0); modeBtn.setAttribute('aria-label','Choose dice');
   live.textContent='';
 }
 modeBtn.addEventListener('click',()=>editing?exitEdit():enterEdit());
