@@ -7,7 +7,7 @@ A 3D dice roller for tabletop games — d4, d6, d8, d10, d12, d20, d100 — rend
 
 **Live demo: [dice.dariakhitrina.com](https://dice.dariakhitrina.com)**
 
-▶️ [Watch the preview video](docs/dice-preview.mp4)
+▶️ [Watch the preview video](docs/dice-preview-compressed.mp4)
 
 ## Features
 
