@@ -67,7 +67,7 @@ function buildDie(def){
 const TILT=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.2,0.3,0.04));
 const TILT_D20=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.08,0.12,0.02));
 // d4 shows a flat triangle, so lean it a bit more to reveal the neighbouring faces.
-const TILT_D4=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.45,0.8,0.25));
+const TILT_D4=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.4,0.62,0.2));
 const SHOW_TILT=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35,0.45,0.12));
 function poseFor(d, value, tilt){
   let f, up;
