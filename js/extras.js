@@ -27,11 +27,11 @@ function dropExtra(x){
   extraPool.splice(extraPool.indexOf(x),1);
 }
 function updateExtras(dt){
-  const slide=1-Math.exp(-(reduced?40:11)*dt);
+  const slide=1-Math.exp(-(reduced?40:11)*dt), fade=1-Math.exp(-(reduced?40:32)*dt);
   for(let i=extraPool.length-1;i>=0;i--){
     const x=extraPool[i];
     updateRoll(x,dt);
-    x.pop+=((x.dying?0:1)-x.pop)*slide;
+    x.pop+=((x.dying?0:1)-x.pop)*(x.dying?fade:slide);
     if(x.dying&&(reduced||x.pop<0.02)){ dropExtra(x); continue; }
     x.p.x+=(SLOT_X[x.slot]-x.p.x)*slide; x.p.y+=(SLOT_Y-x.p.y)*slide; x.p.z+=(0-x.p.z)*slide;
     x.mesh.position.set(x.p.x+x.pos.x*0.5, x.p.y+x.pos.y*0.5, x.p.z);
