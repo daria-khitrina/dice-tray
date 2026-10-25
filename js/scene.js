@@ -66,13 +66,15 @@ function buildDie(def){
 
 const TILT=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.2,0.3,0.04));
 const TILT_D20=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.08,0.12,0.02));
+// d4 shows a flat triangle, so lean it a bit more to reveal the neighbouring faces.
+const TILT_D4=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.3,0.5,0.15));
 const SHOW_TILT=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35,0.45,0.12));
 function poseFor(d, value, tilt){
   let f, up;
   f=d.faces.find(x=>x.value===value); up=f.up;
   const n=f.normal, r=new THREE.Vector3().crossVectors(up,n);
   const m=new THREE.Matrix4().set(r.x,r.y,r.z,0, up.x,up.y,up.z,0, n.x,n.y,n.z,0, 0,0,0,1);
-  return (tilt||(d.id==='d20'?TILT_D20:TILT)).clone().multiply(new THREE.Quaternion().setFromRotationMatrix(m));
+  return (tilt||(d.id==='d20'?TILT_D20:d.id==='d4'?TILT_D4:TILT)).clone().multiply(new THREE.Quaternion().setFromRotationMatrix(m));
 }
 function randomValue(d){
   return d.faces[Math.floor(Math.random()*d.faces.length)].value;
