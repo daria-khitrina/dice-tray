@@ -41,15 +41,7 @@ function buildDie(def){
     g.closePath(); g.lineJoin='round'; g.strokeStyle=INK; g.lineWidth=0.05*k; g.stroke();
     g.fillStyle=INK; g.textAlign='center'; g.textBaseline='middle';
     g.font=`600 ${fs}px Lexend, system-ui, sans-serif`;
-    if(def.id==='d4'){
-      f.idx.forEach((vi,j)=>{
-        const [x,y]=p2[j];
-        g.save(); g.translate(cx+x*k*0.56, cy-y*k*0.56); g.rotate(Math.atan2(x,y));
-        drawNum(g,String(vi+1),fs); g.restore();
-      });
-    } else {
-      g.save(); g.translate(cx,cy); drawNum(g,label(def.id,f.value),fs); g.restore();
-    }
+    g.save(); g.translate(cx,cy); drawNum(g,label(def.id,f.value),fs); g.restore();
     const tri=(a,b,c)=>{
       let o=[a,b,c];
       const A=verts[f.idx[a]],B=verts[f.idx[b]],C=verts[f.idx[c]];
@@ -74,29 +66,17 @@ function buildDie(def){
 
 const TILT=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.2,0.3,0.04));
 const TILT_D20=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.08,0.12,0.02));
+// d4 shows a flat triangle, so lean it a bit more to reveal the neighbouring faces.
+const TILT_D4=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.42,0.71,0.22));
 const SHOW_TILT=new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.35,0.45,0.12));
 function poseFor(d, value, tilt){
   let f, up;
-  if(d.id==='d4'){
-    const vi=value-1;
-    // Sit like a real d4 on a table: result corner up, one side edge facing
-    // the viewer, seen from a little above.
-    const v=d.verts[vi].clone().normalize();
-    const others=[0,1,2,3].filter(i=>i!==vi);
-    const w=d.verts[others[Math.floor(Math.random()*3)]];
-    const fr=w.clone().addScaledVector(v,-w.dot(v)).normalize();
-    const rr=new THREE.Vector3().crossVectors(v,fr);
-    const m4=new THREE.Matrix4().set(rr.x,rr.y,rr.z,0, v.x,v.y,v.z,0, fr.x,fr.y,fr.z,0, 0,0,0,1);
-    const lean=new THREE.Quaternion().setFromAxisAngle(V3(1,0,0), 0.9);
-    return TILT.clone().multiply(lean).multiply(new THREE.Quaternion().setFromRotationMatrix(m4));
-  }
   f=d.faces.find(x=>x.value===value); up=f.up;
   const n=f.normal, r=new THREE.Vector3().crossVectors(up,n);
   const m=new THREE.Matrix4().set(r.x,r.y,r.z,0, up.x,up.y,up.z,0, n.x,n.y,n.z,0, 0,0,0,1);
-  return (tilt||(d.id==='d20'?TILT_D20:TILT)).clone().multiply(new THREE.Quaternion().setFromRotationMatrix(m));
+  return (tilt||(d.id==='d20'?TILT_D20:d.id==='d4'?TILT_D4:TILT)).clone().multiply(new THREE.Quaternion().setFromRotationMatrix(m));
 }
 function randomValue(d){
-  if(d.id==='d4') return 1+Math.floor(Math.random()*4);
   return d.faces[Math.floor(Math.random()*d.faces.length)].value;
 }
 const restValue={d4:4,d6:6,d8:8,d10:0,d12:12,d20:20,d100:0};
@@ -110,7 +90,7 @@ const dice=DEFS.map((def,i)=>{
     sp:V3(0,0,0), ss:1, phase:rand(0,TAU)
   });
   d.q.copy(poseFor(d, restValue[def.id]));
-  d.showQ=poseFor(d, restValue[def.id], d.id==='d4'?null:SHOW_TILT);
+  d.showQ=poseFor(d, restValue[def.id], SHOW_TILT);
   d.mesh.userData.die=i;
   scene.add(d.mesh);
   return d;
