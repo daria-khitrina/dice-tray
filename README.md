@@ -22,6 +22,8 @@ A 3D dice roller for tabletop games — d4, d6, d8, d10, d12, d20, d100 — rend
 | --- | --- | --- |
 | Pick a die | Swipe left / right | `←` / `→` |
 | Roll | Swipe up / down | `↑` / `↓` / `Space` |
+| Roll (tap) | Tap the die | — |
+| Roll another copy (advantage / disadvantage) | Tap the die again while it is still rolling (up to 3 dice) | `↑` / `Space` while rolling |
 | Choose visible dice | Long-press or gear button | — (`Esc` to exit) |
 
 ## Running locally

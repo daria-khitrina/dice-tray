@@ -105,6 +105,7 @@ function syncOrder(){ order.splice(0,order.length,...lineArr,...removed); refres
 function enterEdit(){
   if(editing) return;
   editAnchor=frontIndex(); lineArr=editLine().line; editing=true; dragging=null;
+  dice.forEach(clearExtras);
   const tg=editTargets();
   dice.forEach(d=>{ const t=tg.get(d.index); d.sp.set(t.x,t.y,0); d.ss=scaleFor(d,t.D); });
   document.body.classList.add('editing');
