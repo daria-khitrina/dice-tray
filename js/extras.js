@@ -27,7 +27,7 @@ function dropExtra(x){
   extraPool.splice(extraPool.indexOf(x),1);
 }
 function updateExtras(dt){
-  const slide=1-Math.exp(-(reduced?40:11)*dt), fade=1-Math.exp(-(reduced?40:32)*dt);
+  const slide=1-Math.exp(-(reduced?40:11)*dt), fade=1-Math.exp(-(reduced?60:80)*dt);
   for(let i=extraPool.length-1;i>=0;i--){
     const x=extraPool[i];
     updateRoll(x,dt);
