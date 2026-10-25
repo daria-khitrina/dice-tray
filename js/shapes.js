@@ -14,7 +14,7 @@ function cyc(x,y,z){return [...combos(x,y,z),...combos(z,x,y),...combos(y,z,x)];
 
 /* ---------- Dice set (colors from the reference art) ---------- */
 const DEFS=[
-  {id:'d4',   color:'#B86FBA', size:1.22, fs:.30},
+  {id:'d4',   color:'#B86FBA', size:1.22, fs:.40},
   {id:'d6',   color:'#EF8648', size:0.98, fs:.66},
   {id:'d8',   color:'#D3CFBC', size:1.00, fs:.50},
   {id:'d10',  color:'#D6AA42', size:1.00, fs:.44},
@@ -75,7 +75,8 @@ function shape(id){
   }
   const m=Math.max(...verts.map(v=>v.length())); verts.forEach(v=>v.divideScalar(m));
   faces.forEach(f=>orderFace(f,verts));
-  if(id==='d6'||id==='d8'||id==='d12'||id==='d20') assignOpposite(faces, faces.length);
+  if(id==='d4') faces.forEach((f,i)=>{f.value=i+1;});
+  else if(id==='d6'||id==='d8'||id==='d12'||id==='d20') assignOpposite(faces, faces.length);
   faces.forEach(f=>{
     let t;
     if(f.pole!=null) t=verts[f.pole].clone();
