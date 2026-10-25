@@ -64,6 +64,7 @@ function frame(now){
       b.tabIndex=show?0:-1;
     }
   });
+  updateExtras(dt);
   render();
   requestAnimationFrame(frame);
 }

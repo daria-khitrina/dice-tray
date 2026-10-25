@@ -46,7 +46,7 @@ function goTo(i){
 }
 let shownFront=-1;
 function updateFront(front){
-  if(shownFront>=0) dice[shownFront].last=null; // forget the result of the die we leave
+  if(shownFront>=0){ dice[shownFront].last=null; clearExtras(dice[shownFront]); } // forget the result (and copies) of the die we leave
   shownFront=front;
 }
 function startRoll(d, dir, power){
@@ -60,9 +60,11 @@ function startRoll(d, dir, power){
   d.vel.set(rand(-1.4,1.4), dir*(reduced?0.8:3+power*3), 0);
 }
 function finishRoll(d,value){
-  if(d.index!==shownFront) return; // swiped away mid-roll: forget it
+  const p=d.parent||d;
+  if(p.index!==shownFront) return; // swiped away mid-roll: forget it
   d.last=value;
-  live.textContent=`${d.id} rolled ${label(d.id,value)}`;
+  const group=[p,...p.extras];
+  if(group.every(x=>!x.roll)) live.textContent=`${p.id} rolled ${group.filter(x=>x.last!=null).map(x=>label(p.id,x.last)).join(', ')}`;
 }
 const qa=new THREE.Quaternion(), qb=new THREE.Quaternion(), qc=new THREE.Quaternion();
 function updateRoll(d,dt){

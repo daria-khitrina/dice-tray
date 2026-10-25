@@ -106,7 +106,7 @@ const dice=DEFS.map((def,i)=>{
   const d=Object.assign({}, def, b, {
     q:new THREE.Quaternion(), idle:rand(0,TAU), idleSpeed:(i%2?-1:1)*rand(.32,.55),
     idleAxis:V3(rand(-.35,.35),1,rand(-.35,.35)).normalize(),
-    roll:null, pos:V3(0,0,0), vel:V3(0,0,0), pulse:0, w:1, alpha:1, last:null, index:i,
+    roll:null, pos:V3(0,0,0), vel:V3(0,0,0), pulse:0, w:1, alpha:1, last:null, index:i, extras:[],
     sp:V3(0,0,0), ss:1, phase:rand(0,TAU)
   });
   d.q.copy(poseFor(d, restValue[def.id]));
@@ -157,7 +157,7 @@ quadScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),quadMat));
 const quadCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
 
 function setPass(sharp){
-  dice.forEach(d=>{
+  dice.concat(extraPool).forEach(d=>{
     const a=(sharp?d.w:1-d.w)*d.alpha;
     d.mesh.visible=a>0.01; d.mat.opacity=a;
   });

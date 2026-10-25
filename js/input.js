@@ -6,7 +6,7 @@ const pxStep=()=>Math.min(W*0.5,260);
 function pick(x,y,filter){
   ndc.set(x/W*2-1, -(y/H)*2+1);
   ray.setFromCamera(ndc,camera);
-  const list=dice.filter(filter).map(d=>d.mesh);
+  const list=dice.filter(filter).concat(extraPool.filter(x=>!x.dying&&filter(x.parent))).map(d=>d.mesh);
   const vis=list.map(m=>m.visible); list.forEach(m=>{m.visible=true;});
   const hits=ray.intersectObjects(list);
   list.forEach((m,j)=>{m.visible=vis[j];});
@@ -63,10 +63,10 @@ function endDrag(e,cancel){
       const base=Math.round(drag.ring0); ringTarget=clamp(tgt,base-2,base+2);
     }
   } else if(drag.mode==='v' && !cancel){
-    if(Math.abs(dy)>28||Math.abs(vy)>0.35) startRoll(dice[frontIndex()], dy<0?1:-1, clamp(Math.abs(vy)/2.2,0,1));
+    if(Math.abs(dy)>28||Math.abs(vy)>0.35) rollGroup(dice[frontIndex()], dy<0?1:-1, clamp(Math.abs(vy)/2.2,0,1));
   } else if(!drag.mode && !cancel){
     const i=pick(e.clientX,e.clientY,d=>active.has(d.index));
-    if(i>=0){ if(i===frontIndex()) startRoll(dice[i],1,0.45); else goTo(i); }
+    if(i>=0){ if(i===frontIndex()) rollGroup(dice[i],1,0.45); else goTo(i); }
   }
   canvas.classList.remove('grabbing');
   drag=null;
@@ -78,6 +78,6 @@ addEventListener('keydown',e=>{
   if(editing){ if(e.key==='Escape'){ exitEdit(); e.preventDefault(); } return; }
   if(e.key==='ArrowRight'){ ringTarget=Math.round(ringTarget)+1; e.preventDefault(); }
   else if(e.key==='ArrowLeft'){ ringTarget=Math.round(ringTarget)-1; e.preventDefault(); }
-  else if(e.key==='ArrowUp'||(e.key===' '&&e.target===document.body)){ startRoll(dice[frontIndex()],1,0.6); e.preventDefault(); }
-  else if(e.key==='ArrowDown'){ startRoll(dice[frontIndex()],-1,0.6); e.preventDefault(); }
+  else if(e.key==='ArrowUp'||(e.key===' '&&e.target===document.body)){ rollGroup(dice[frontIndex()],1,0.6); e.preventDefault(); }
+  else if(e.key==='ArrowDown'){ rollGroup(dice[frontIndex()],-1,0.6); e.preventDefault(); }
 });
