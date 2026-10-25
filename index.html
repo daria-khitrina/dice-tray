@@ -12,10 +12,30 @@
 <meta name="twitter:description" content="A 3D dice roller for tabletop games: d4, d6, d8, d10, d12, d20, d100.">
 <meta name="twitter:image" content="https://dice.dariakhitrina.com/og-image.png">
 <meta name="claude:viewport-fit-sides" content="cover">
+<style>
+#loader{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:#0b0b0c radial-gradient(120% 70% at 50% 42%,#161617,#0b0b0c 72%);transition:opacity .35s ease}
+#loader.done{opacity:0;pointer-events:none}
+#loader svg{width:min(52vw,210px);height:auto;overflow:visible}
+#loader .orbit{transform-box:view-box;transform-origin:107.5px 120.7px;animation:ldorbit 48s linear infinite}
+@keyframes ldorbit{to{transform:rotate(-360deg)}}
+@media (prefers-reduced-motion:reduce){#loader .orbit{animation:none}}
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@600&display=swap">
 <link rel="stylesheet" href="style.css">
+
+<div id="loader" role="status" aria-label="Loading"><svg viewBox="0 0 211 221" fill="none" stroke-width="2.89" aria-hidden="true">
+<path d="M112.206 90.3408L83.5645 101.406L78.8457 131.755L102.879 151.038L131.63 140.081L136.239 109.624L112.206 90.3408ZM78.8457 131.755L89.7099 131.536M83.5645 101.406L110.012 105.351M83.5645 101.406L89.7099 131.536M112.206 90.3408L110.012 105.351M136.239 109.624L121.095 136.356M136.239 109.624L110.012 105.351M131.63 140.081L121.095 136.356M102.879 151.038L89.7099 131.536M102.879 151.038L121.095 136.356M89.7099 131.536L110.012 105.351M89.7099 131.536L121.095 136.356M110.012 105.351L121.095 136.356" stroke="#A82C26"/>
+<g class="orbit">
+<path d="M206.403 128.97L209.478 121.068L201.133 81.6709L165.889 99.7783L161.168 107.46L169.622 147.735L206.403 128.97ZM161.168 107.46L170.94 103.4M201.133 81.6709L170.94 103.4M201.133 81.6709L203.439 118.983M206.403 128.97L203.439 118.983M203.439 118.983L183.566 118.105M183.566 118.105L170.94 103.4M183.566 118.105L169.622 147.735" stroke="#468953"/>
+<path d="M36.5954 102.905L49.335 90.9092M36.5954 102.905L38.3679 137.365M36.5954 102.905L1.47852 104.65M1.47852 104.65L3.25098 139.219L38.3679 137.365L51.4398 125.26L49.335 90.9092L14.772 92.654L1.47852 104.65Z" stroke="#EF8048"/>
+<path d="M38.9233 180.231L41.0154 166.329M38.9233 180.231L57.7517 180.45M38.9233 180.231L32.5371 196.65M87.0403 174.429L73.8274 163.264L58.6326 159.542L41.0154 166.329L32.8674 179.136L32.5371 196.65L45.6399 210.224L62.156 215.697L79.4429 208.91L87.0403 193.914V174.429ZM87.0403 174.429L71.2949 165.781L58.6326 159.542M71.2949 165.781L57.7517 180.45M57.7517 180.45L64.6885 197.745M45.6399 210.224L64.6885 197.745M87.0403 193.914L64.6885 197.745" stroke="#4172C6"/>
+<path d="M125.362 168.574L121.323 207.825L159.56 218.639L164.049 179.072L125.362 168.574ZM159.56 218.639L146.981 199.958M121.323 207.825L146.981 199.958M125.362 168.574L146.981 199.958M146.981 199.958L164.049 179.072" stroke="#D1CDBA"/>
+<path d="M54.8089 44.6506L62.1021 36.6308M79.3697 77.2445L104.462 44.7446L104.344 36.7962L80.3365 4.2535L55.2975 36.196L54.8089 44.6506L79.3697 77.2445ZM62.1021 36.6308L80.3365 4.2535M62.1021 36.6308L79.6403 44.871M80.3365 4.2535L97.6851 36.6345M104.462 44.7446L97.6851 36.6345M79.3697 77.2445L79.6403 44.871M79.6403 44.871L97.6851 36.6345" stroke="#D1A842"/>
+<path d="M164.983 70.2147L188.451 47.9178L143.121 24.7189L133.421 74.1201L164.983 70.2147ZM143.121 24.7189L164.983 70.2147" stroke="#B870BB"/>
+</g>
+</svg></div>
 
 <canvas id="stage" aria-label="3D dice. Swipe left or right to switch dice, swipe up or down to roll, long-press a die to choose which dice to show."></canvas>
 <div id="badges"></div>
