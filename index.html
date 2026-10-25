@@ -16,15 +16,15 @@
 #loader{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:#0b0b0c radial-gradient(120% 70% at 50% 42%,#161617,#0b0b0c 72%);transition:opacity .35s ease}
 #loader.done{opacity:0;pointer-events:none}
 #loader svg{width:min(52vw,210px);height:auto;overflow:visible}
-#loader .ld{transform-box:fill-box;transform-origin:center;animation:ldspin linear infinite}
-#loader .ld0{animation-duration:34s;}
-#loader .ld1{animation-duration:26s;animation-direction:reverse;}
-#loader .ld2{animation-duration:30s;}
-#loader .ld3{animation-duration:38s;animation-direction:reverse;}
-#loader .ld4{animation-duration:24s;}
-#loader .ld5{animation-duration:32s;animation-direction:reverse;}
-#loader .ld6{animation-duration:28s;}
-@keyframes ldspin{to{transform:rotate(360deg)}}
+#loader .ld{transform-box:fill-box;transform-origin:center;animation:ldfloat ease-in-out infinite}
+#loader .ld0{animation-duration:5.2s;animation-delay:0s;--r:3deg}
+#loader .ld1{animation-duration:4.4s;animation-delay:-1.1s;--r:-3deg}
+#loader .ld2{animation-duration:4.8s;animation-delay:-2.3s;--r:3deg}
+#loader .ld3{animation-duration:5.6s;animation-delay:-0.6s;--r:-3deg}
+#loader .ld4{animation-duration:4.2s;animation-delay:-1.8s;--r:3deg}
+#loader .ld5{animation-duration:5.0s;animation-delay:-3.0s;--r:-3deg}
+#loader .ld6{animation-duration:4.6s;animation-delay:-2.6s;--r:3deg}
+@keyframes ldfloat{0%,100%{transform:translateY(5px) rotate(calc(var(--r)*-1))}50%{transform:translateY(-5px) rotate(var(--r))}}
 @media (prefers-reduced-motion:reduce){#loader .ld{animation:none}}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
